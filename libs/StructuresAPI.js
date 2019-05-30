@@ -22,7 +22,6 @@ var StructuresAPI = {
 	
 	ROTATE_RANDOM:[0,1,2,3,4,5,6,7,8,9],
 	
-	
 	dir:"structures",
 	structures:{},
 	
@@ -32,10 +31,14 @@ var StructuresAPI = {
 	
 	get:function(name){
 		if(!this.structures.hasOwnProperty(name)){
-			if(FileTools.isExists(__dir__ + this.dir + "/" + name + ".struct"))
-				this.structures[name] = JSON.parse(FileTools.ReadText(__dir__ + this.dir + "/" + name + ".struct"));
-			else
-				alert("Структура не найдена");
+			var path = __dir__ + this.dir + "/" + name + ".struct";
+			
+			if(FileTools.isExists(path))
+				this.structures[name] = JSON.parse(FileTools.ReadText(path));
+			else{
+				alert("Структура \""+name+"\" не найдена");
+				return false;
+			}
 		}
 		return this.structures[name];
 	},
@@ -52,11 +55,19 @@ var StructuresAPI = {
 	
 	set:function(name, x, y, z, rotate){
 		if(rotate === undefined)rotate = StructuresAPI.ROTATE_NONE;
-		if(rotate instanceof Array) rotate = rotate[Math.round(rand(0, rotate.length-1))];
+		if(rotate instanceof Array){
+			if(rotate.indexOf(StructuresAPI.ROTATE_NONE) == -1)
+				rotate.push(StructuresAPI.ROTATE_NONE);
 			
-		var str = this.get(name);
-		for(var i = 0; i < str.length; i++){
-			var block = str[i];
+			rotate = rotate[Math.round(rand(0, rotate.length-1))];
+		}
+		
+		var arr = this.get(name);
+		
+		if(arr === false)return false;
+		
+		for(var i = 0; i < arr.length; i++){
+			var block = arr[i];
 			var id, data = 0;
 			
 			if(typeof block[3] == "number"){
@@ -72,13 +83,13 @@ var StructuresAPI = {
 				break;
 				
 				case StructuresAPI.ROTATE_90Y:
-					World.setBlock(x-block[2], y+block[1], z+block[0], id, data);
+					World.setBlock(x+block[2], y+block[1], z-block[0], id, data);
 				break;
 				case StructuresAPI.ROTATE_180Y:
 					World.setBlock(x-block[0], y+block[1], z-block[2], id, data);
 				break;
 				case StructuresAPI.ROTATE_270Y:
-					World.setBlock(x+block[2], y+block[1], z+block[0], id, data);
+					World.setBlock(x-block[2], y+block[1], z+block[0], id, data);
 				break;
 				
 				case StructuresAPI.ROTATE_90X:
@@ -107,29 +118,19 @@ var StructuresAPI = {
 	}
 }
 
-
-function rand(min, max){
-	if(min === undefined)min=0;
-	if(max === undefined)max=min+1;
-	
-	return (max-min) * Math.random() + min;
-}
-
-ModAPI.addAPICallback("WorldEdit", function(api){
-	var WorldEdit = api;
+ModAPI.addAPICallback("WorldEdit", function(WorldEdit){
 	WorldEdit.addCommand({
 		name:"/save",
-		description:"Save structure",
+		description:"Save structure.",
 		args:"<file_name> [-a] [-x] [-y] [-z]",
 		selectedArea:true,
 		event:function(args){
 			var pos = WorldEdit.getPosition();
 			var arr = [];
 			
-			var center_x = args[args.indexOf("-x") + 1] || pos.pos1.x;
-			var center_y = args[args.indexOf("-y") + 1] || pos.pos1.y;
-			var center_z = args[args.indexOf("-z") + 1] || pos.pos1.z;
-			
+			var center_x = args.indexOf("-x")!=-1 ? args[args.indexOf("-x") + 1] : pos.pos1.x;
+			var center_y = args.indexOf("-y")!=-1 ? args[args.indexOf("-y") + 1] : pos.pos1.y;
+			var center_z = args.indexOf("-z")!=-1 ? args[args.indexOf("-z") + 1] : pos.pos1.z;
 			
 			for(x = pos.pos1.x; x <= pos.pos2.x; x++)
 				for(y = pos.pos1.y; y <= pos.pos2.y; y++)
@@ -146,9 +147,35 @@ ModAPI.addAPICallback("WorldEdit", function(api){
 					}
 				
 			StructuresAPI.save(args[0], arr);
-			Game.message("Сохранено в "+StructuresAPI.dir+"/"+args[0]+".struct");
+			Game.message(Translation.sprintf("Saved to %s", StructuresAPI.dir+"/"+args[0]+".struct"));
 		}
 	});
 });
+
+function rand(min, max){
+	if(min === undefined)min=0;
+	if(max === undefined)max=min+1;
+	
+	return (max-min) * Math.random() + min;
+}
+
+/*Language*/
+Translation.addTranslation("Saved to %s",{
+	ru:"Сохранено в %s",
+	en:"Saved to %s",
+});
+Translation.addTranslation("Save structure.",{
+	ru:"Сохранить структуру.",
+	en:"Save structure.",
+});
+
+if(!Translation.sprintf){
+	Translation.sprintf = function(original, ...rpls){
+		var str = Translation.translate(original);
+		for(var i = 0; i < rpls.length; i++){
+			str.replace("%s", rpls[i]);
+		}
+	};
+}
 
 EXPORT("StructuresAPI", StructuresAPI);
