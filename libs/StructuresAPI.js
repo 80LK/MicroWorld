@@ -170,10 +170,10 @@ Translation.addTranslation("Save structure.",{
 });
 
 if(!Translation.sprintf){
-	Translation.sprintf = function(original, ...rpls){
-		var str = Translation.translate(original);
-		for(var i = 0; i < rpls.length; i++){
-			str.replace("%s", rpls[i]);
+	Translation.sprintf = function(){
+		var str = Translation.translate(arguments[0]);
+		for(var i = 1; i < arguments.length; i++){
+			str.replace("%s", arguments[i]);
 		}
 	};
 }
