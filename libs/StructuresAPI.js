@@ -6,21 +6,59 @@ LIBRARY({
 });
 
 var StructuresAPI = {
-	ROTATE_NONE:0,
+	ROTATE_NONE:[
+		1,0,0,
+		0,1,0,
+		0,0,1
+	],
 	
-	ROTATE_90Y: 1,
-	ROTATE_180Y:2,
-	ROTATE_270Y:3,
+	ROTATE_90Y: [
+		0,0,1,
+		0,1,0,
+		-1,0,0
+	],
+	ROTATE_180Y:[
+		0,0,1,
+		0,1,0,
+		1,0,0
+	],
+	ROTATE_270Y:[
+		0,0,-1,
+		0,1,0,
+		1,0,0
+	],
 	
-	ROTATE_90X: 4,
-	ROTATE_180X:5,
-	ROTATE_270X:6,
+	ROTATE_90X: [
+		1,0,0,
+		0,0,-1,
+		0,1,0
+	],
+	ROTATE_180X:[
+		1,0,0,
+		0,-1,0,
+		0,0,-1
+	],
+	ROTATE_270X:[
+		1,0,0,
+		0,0,1,
+		0,-1,0
+	],
 	
-	ROTATE_90Z: 7,
-	ROTATE_180Z:8,
-	ROTATE_270Z:9,
-	
-	ROTATE_RANDOM:[0,1,2,3,4,5,6,7,8,9],
+	ROTATE_90Z: [
+		0,-1,0,
+		1,0,0,
+		0,0,1
+	],
+	ROTATE_180Z:[
+		-1,0,0,
+		0,-1,0,
+		0,0,1
+	],
+	ROTATE_270Z:[
+		0,1,0,
+		-1,0,0,
+		0,0,1
+	],
 	
 	dir:"structures",
 	structures:{},
@@ -43,8 +81,45 @@ var StructuresAPI = {
 		return this.structures[name];
 	},
 	
+	getStructures:function(name, x, y, z, rotate_y){
+		if(rotate_y === undefined) rotate_y = false;
+		var rotates = rotate_y == true ? StructuresAPI.ROTATE_Y : StructuresAPI.ROTATE_ALL;
+		
+		var struct = this.get(name);
+		if(struct == false) return;
+		
+		for(var i = 0; i < rotates.length; i++){
+			var rotate = rotates[i];
+			for(var k = 0; k < struct.length; k++){
+				var block = struct[k], id, data =0;
+				var dx = block[0] * rotate[0] + block[1] * rotate[1] + block[2] * rotate[2];
+				var dy = block[0] * rotate[3] + block[1] * rotate[4] + block[2] * rotate[5];
+				var dz = block[0] * rotate[6] + block[1] * rotate[7] + block[2] * rotate[8];
+				
+				if(typeof block[3] == "number")
+					id = block[3];
+				else if(typeof block[3] == "string")
+					id = BlockID[block[3]];
+				else{
+					id = block[3].id;
+					data = block[3].data;
+				}
+					
+				_block = World.getBlock(x + dx, y+dy, z+dz);
+				if(_block.id != id || _block.data != data) break;
+				
+				if(_block.id == id && _block.data == data && k == struct.length-1)return true;
+				
+			}
+		}
+		
+		return false;
+	},
+	
 	save:function(name, obj){
 		for(var i = 0; i < obj.length; i++){
+			obj[i][3].id = getBlockSID(obj[i][3].id);
+			
 			if(obj[i][3].data == 0)
 				obj[i][3] = obj[i][3].id;
 		}
@@ -55,7 +130,8 @@ var StructuresAPI = {
 	
 	set:function(name, x, y, z, rotate){
 		if(rotate === undefined)rotate = StructuresAPI.ROTATE_NONE;
-		if(rotate instanceof Array){
+			
+		if(rotate[0] instanceof Array){
 			if(rotate.indexOf(StructuresAPI.ROTATE_NONE) == -1)
 				rotate.push(StructuresAPI.ROTATE_NONE);
 			
@@ -77,48 +153,52 @@ var StructuresAPI = {
 				data = block[3].data || block[3].meta || 0;
 			}
 			
-			switch(rotate){
-				case StructuresAPI.ROTATE_NONE:
-					World.setBlock(x+block[0], y+block[1], z+block[2], id, data);
-				break;
-				
-				case StructuresAPI.ROTATE_90Y:
-					World.setBlock(x+block[2], y+block[1], z-block[0], id, data);
-				break;
-				case StructuresAPI.ROTATE_180Y:
-					World.setBlock(x-block[0], y+block[1], z-block[2], id, data);
-				break;
-				case StructuresAPI.ROTATE_270Y:
-					World.setBlock(x-block[2], y+block[1], z+block[0], id, data);
-				break;
-				
-				case StructuresAPI.ROTATE_90X:
-					World.setBlock(x+block[0], y-block[2], z+block[1], id, data);
-				break;
-				case StructuresAPI.ROTATE_180X:
-					World.setBlock(x+block[0], y-block[1], z-block[2], id, data);
-				break;
-				case StructuresAPI.ROTATE_270X:
-					World.setBlock(x+block[0], y+block[2], z-block[1], id, data);
-				break;
-				
-				case StructuresAPI.ROTATE_90Z:
-					World.setBlock(x-block[1], y+block[0], z+block[2], id, data);
-				break;
-				case StructuresAPI.ROTATE_180Z:
-					World.setBlock(x-block[0], y-block[1], z+block[2], id, data);
-				break;
-				case StructuresAPI.ROTATE_270Z:
-					World.setBlock(x+block[1], y-block[0], z+block[2], id, data);
-				break;
-				
-				
-			}
+			var dx = block[0] * rotate[0] + block[1] * rotate[1] + block[2] * rotate[2];
+			var dy = block[0] * rotate[3] + block[1] * rotate[4] + block[2] * rotate[5];
+			var dz = block[0] * rotate[6] + block[1] * rotate[7] + block[2] * rotate[8];
+			
+			World.setBlock(x + dx, y + dy, z + dz, id, data) 
 		}
 	}
 }
 
+StructuresAPI.ROTATE_RANDOM = [
+	StructuresAPI.ROTATE_180X,
+	StructuresAPI.ROTATE_180Y,
+	StructuresAPI.ROTATE_180Z,
+	StructuresAPI.ROTATE_270X,
+	StructuresAPI.ROTATE_270Y,
+	StructuresAPI.ROTATE_270Z,
+	StructuresAPI.ROTATE_90X,
+	StructuresAPI.ROTATE_90Y,
+	StructuresAPI.ROTATE_90Z,
+	StructuresAPI.ROTATE_NONE
+];
+StructuresAPI.ROTATE_ALL = StructuresAPI.ROTATE_RANDOM;
+StructuresAPI.ROTATE_Y = [
+	StructuresAPI.ROTATE_90Y,
+	StructuresAPI.ROTATE_270Y,
+	StructuresAPI.ROTATE_180Y,
+	StructuresAPI.ROTATE_NONE
+];
+
 ModAPI.addAPICallback("WorldEdit", function(WorldEdit){
+	var g_center = null;
+	
+	Callback.addCallback("ItemUse", function(c,i){
+		if(i.id == 268){
+			g_center = c;
+		}
+		if(i.id == 271){
+			g_center = null;
+		}
+	});
+	Callback.addCallback("DestroyBlockStart", function() {
+		if(Player.getCarriedItem().id == 271){
+			g_center = null;
+		}
+	});
+	
 	WorldEdit.addCommand({
 		name:"/save",
 		description:"Save structure.",
@@ -128,9 +208,9 @@ ModAPI.addAPICallback("WorldEdit", function(WorldEdit){
 			var pos = WorldEdit.getPosition();
 			var arr = [];
 			
-			var center_x = args.indexOf("-x")!=-1 ? args[args.indexOf("-x") + 1] : pos.pos1.x;
-			var center_y = args.indexOf("-y")!=-1 ? args[args.indexOf("-y") + 1] : pos.pos1.y;
-			var center_z = args.indexOf("-z")!=-1 ? args[args.indexOf("-z") + 1] : pos.pos1.z;
+			var center_x = args.indexOf("-x")!=-1 ? args[args.indexOf("-x") + 1] : g_center!= null? g_center.x : pos.pos1.x;
+			var center_y = args.indexOf("-y")!=-1 ? args[args.indexOf("-y") + 1] : g_center!= null? g_center.y : pos.pos1.y;
+			var center_z = args.indexOf("-z")!=-1 ? args[args.indexOf("-z") + 1] : g_center!= null? g_center.z : pos.pos1.z;
 			
 			for(x = pos.pos1.x; x <= pos.pos2.x; x++)
 				for(y = pos.pos1.y; y <= pos.pos2.y; y++)
@@ -159,6 +239,16 @@ function rand(min, max){
 	return (max-min) * Math.random() + min;
 }
 
+
+function getBlockSID(ID){
+	for(var i in BlockID){
+		if(BlockID[i]==ID)
+			return i;
+	}
+	return ID;
+}
+
+
 /*Language*/
 Translation.addTranslation("Saved to %s",{
 	ru:"Сохранено в %s",
@@ -172,9 +262,11 @@ Translation.addTranslation("Save structure.",{
 if(!Translation.sprintf){
 	Translation.sprintf = function(){
 		var str = Translation.translate(arguments[0]);
-		for(var i = 1; i < arguments.length; i++){
-			str.replace("%s", arguments[i]);
-		}
+		
+		for(var i = 1; i < arguments.length; i++)
+			str = str.replace("%s", arguments[i]);
+		
+		return str;
 	};
 }
 
