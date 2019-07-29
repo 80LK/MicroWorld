@@ -74,7 +74,7 @@ var StructuresAPI = {
 			if(FileTools.isExists(path))
 				this.structures[name] = JSON.parse(FileTools.ReadText(path));
 			else{
-				alert("Структура \""+name+"\" не найдена");
+				alert(Translation.sprintf("Structure \"%s\" not found.", name);
 				return false;
 			}
 		}
@@ -108,7 +108,7 @@ var StructuresAPI = {
 				_block = World.getBlock(x + dx, y+dy, z+dz);
 				if(_block.id != id || _block.data != data) break;
 				
-				if(_block.id == id && _block.data == data && k == struct.length-1)return true;
+				if(_block.id == id && _block.data == data && k == struct.length-1) return true;
 				
 			}
 		}
@@ -117,6 +117,9 @@ var StructuresAPI = {
 	},
 	
 	save:function(name, obj){
+		if(!FileTools.isExists(__dir__ + this.dir))
+			FileTools.mkdir(__dir__ + this.dir);
+		
 		for(var i = 0; i < obj.length; i++){
 			obj[i][3].id = getBlockSID(obj[i][3].id);
 			
@@ -182,55 +185,58 @@ StructuresAPI.ROTATE_Y = [
 	StructuresAPI.ROTATE_NONE
 ];
 
-ModAPI.addAPICallback("WorldEdit", function(WorldEdit){
-	var g_center = null;
-	
-	Callback.addCallback("ItemUse", function(c,i){
-		if(i.id == 268){
-			g_center = c;
-		}
-		if(i.id == 271){
-			g_center = null;
-		}
-	});
-	Callback.addCallback("DestroyBlockStart", function() {
-		if(Player.getCarriedItem().id == 271){
-			g_center = null;
-		}
-	});
-	
-	WorldEdit.addCommand({
-		name:"/save",
-		description:"Save structure.",
-		args:"<file_name> [-a] [-x] [-y] [-z]",
-		selectedArea:true,
-		event:function(args){
-			var pos = WorldEdit.getPosition();
-			var arr = [];
-			
-			var center_x = args.indexOf("-x")!=-1 ? args[args.indexOf("-x") + 1] : g_center!= null? g_center.x : pos.pos1.x;
-			var center_y = args.indexOf("-y")!=-1 ? args[args.indexOf("-y") + 1] : g_center!= null? g_center.y : pos.pos1.y;
-			var center_z = args.indexOf("-z")!=-1 ? args[args.indexOf("-z") + 1] : g_center!= null? g_center.z : pos.pos1.z;
-			
-			for(x = pos.pos1.x; x <= pos.pos2.x; x++)
-				for(y = pos.pos1.y; y <= pos.pos2.y; y++)
-					for(z = pos.pos1.z; z <= pos.pos2.z; z++){
-						var block = World.getBlock(x,y,z);
-						if(args.indexOf("-a") == -1 && block.id == 0) continue;
-						
-						arr.push([
-							x - center_x,
-							y - center_y,
-							z - center_z,
-							block
-						]);
-					}
+if(JSON.parse(FileTools.ReadText(__dir__+"build.config")).defaultConfig.buildType == "develop"){
+	ModAPI.addAPICallback("WorldEdit", function(WorldEdit){
+		var g_center = null;
+		
+		Callback.addCallback("ItemUse", function(c,i){
+			if(i.id == 268){
+				g_center = c;
+				Game.message("Центр установлен.");
+			}
+			if(i.id == 271){
+				g_center = null;
+			}
+		});
+		Callback.addCallback("DestroyBlockStart", function() {
+			if(Player.getCarriedItem().id == 271){
+				g_center = null;
+			}
+		});
+		
+		WorldEdit.addCommand({
+			name:"/save",
+			description:"Save structure.",
+			args:"<file_name> [-a] [-x] [-y] [-z]",
+			selectedArea:true,
+			event:function(args){
+				var pos = WorldEdit.getPosition();
+				var arr = [];
 				
-			StructuresAPI.save(args[0], arr);
-			Game.message(Translation.sprintf("Saved to %s", StructuresAPI.dir+"/"+args[0]+".struct"));
-		}
+				var center_x = args.indexOf("-x")!=-1 ? args[args.indexOf("-x") + 1] : g_center!= null? g_center.x : pos.pos1.x;
+				var center_y = args.indexOf("-y")!=-1 ? args[args.indexOf("-y") + 1] : g_center!= null? g_center.y : pos.pos1.y;
+				var center_z = args.indexOf("-z")!=-1 ? args[args.indexOf("-z") + 1] : g_center!= null? g_center.z : pos.pos1.z;
+				
+				for(x = pos.pos1.x; x <= pos.pos2.x; x++)
+					for(y = pos.pos1.y; y <= pos.pos2.y; y++)
+						for(z = pos.pos1.z; z <= pos.pos2.z; z++){
+							var block = World.getBlock(x,y,z);
+							if(args.indexOf("-a") == -1 && block.id == 0) continue;
+							
+							arr.push([
+								x - center_x,
+								y - center_y,
+								z - center_z,
+								block
+							]);
+						}
+					
+				StructuresAPI.save(args[0], arr);
+				Game.message(Translation.sprintf("Saved to %s", StructuresAPI.dir+"/"+args[0]+".struct"));
+			}
+		});
 	});
-});
+}
 
 function rand(min, max){
 	if(min === undefined)min=0;
@@ -241,11 +247,7 @@ function rand(min, max){
 
 
 function getBlockSID(ID){
-	for(var i in BlockID){
-		if(BlockID[i]==ID)
-			return i;
-	}
-	return ID;
+	return IDRegistry.getNameByID(ID) || ID;
 }
 
 
@@ -257,6 +259,10 @@ Translation.addTranslation("Saved to %s",{
 Translation.addTranslation("Save structure.",{
 	ru:"Сохранить структуру.",
 	en:"Save structure.",
+});
+Translation.addTranslation("Structure \"%s\" not found.",{
+	ru:"Структура \"%s\" не найдена.",
+	en:"Structure \"%s\" not found.",
 });
 
 if(!Translation.sprintf){
