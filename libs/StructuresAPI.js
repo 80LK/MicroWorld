@@ -71,10 +71,10 @@ var StructuresAPI = {
 		if(!this.structures.hasOwnProperty(name)){
 			var path = __dir__ + this.dir + "/" + name + ".struct";
 			
-			if(FileTools.isExists(path))
+			if(FileTools.isExists(path)){
 				this.structures[name] = JSON.parse(FileTools.ReadText(path));
-			else{
-				alert(Translation.sprintf("Structure \"%s\" not found.", name);
+			}else{
+				alert(Translation.sprintf("Structure \"%s\" not found.", name));
 				return false;
 			}
 		}
